@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'supabase_config.dart';
 import 'main.dart';
+import 'PointsAddPage.dart';
 class OrgDashboard extends StatelessWidget {
   final String userId;
 
@@ -60,9 +61,13 @@ class OrgDashboard extends StatelessWidget {
               leading: const Icon(Icons.add_circle),
               title: const Text('Points Add'),
               onTap: () {
-                // Navigate to points add
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PointsAddPage()),
+                );
               },
             ),
+
             ListTile(
               leading: const Icon(Icons.manage_accounts),
               title: const Text('Request Manage'),
@@ -122,9 +127,13 @@ class OrgDashboard extends StatelessWidget {
                   icon: Icons.add_circle,
                   title: 'Points Add',
                   onTap: () {
-                    // Navigate to points add
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PointsAddPage()),
+                    );
                   },
                 ),
+
                 _buildDashboardCard(
                   icon: Icons.manage_accounts,
                   title: 'Request Manage',

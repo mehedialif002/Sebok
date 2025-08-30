@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'supabase_config.dart';
 import 'main.dart';
+import 'add_org.dart';
 class AdminDashboard extends StatelessWidget {
   final String userId;
 
@@ -104,24 +105,17 @@ class AdminDashboard extends StatelessWidget {
               style: TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 30),
-            Row(
-              children: [
-                _buildDashboardCard(
-                  icon: Icons.visibility,
-                  title: 'See Details',
-                  onTap: () {
-                    // Navigate to see details
-                  },
-                ),
-                const SizedBox(width: 16),
-                _buildDashboardCard(
-                  icon: Icons.manage_search,
-                  title: 'Manage Requests',
-                  onTap: () {
-                    // Navigate to manage requests
-                  },
-                ),
-              ],
+            ListTile(
+              leading: const Icon(Icons.add_circle),
+              title: const Text('Add Organization'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const OrganizationRegistrationPage(),
+                  ),
+                );
+              },
             ),
           ],
         ),

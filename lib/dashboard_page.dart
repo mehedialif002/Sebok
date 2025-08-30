@@ -6,7 +6,8 @@ import 'main.dart'; // make sure this has LoginPage
 import 'request_form_page.dart';
 import 'requests_list_page.dart';
 import 'package:intl/intl.dart'; // For date formatting
-
+import 'profile_page.dart';
+import 'donation_history_page.dart';
 class DashboardPage extends StatefulWidget {
   final String userId;
 
@@ -135,7 +136,12 @@ class _DashboardPageState extends State<DashboardPage> {
               title: const Text("Profile"),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Profile screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfilePage(userId: widget.userId),
+                  ),
+                );
               },
             ),
             ListTile(
@@ -143,7 +149,12 @@ class _DashboardPageState extends State<DashboardPage> {
               title: const Text("Donation History"),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Donation history screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DonationHistoryPage(userId: widget.userId),
+                  ),
+                );
               },
             ),
             const Divider(),
