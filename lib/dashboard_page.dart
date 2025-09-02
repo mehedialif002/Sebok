@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_config.dart';
@@ -8,6 +7,7 @@ import 'requests_list_page.dart';
 import 'package:intl/intl.dart'; // For date formatting
 import 'profile_page.dart';
 import 'donation_history_page.dart';
+
 class DashboardPage extends StatefulWidget {
   final String userId;
 
@@ -20,7 +20,7 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   bool isLoading = true;
   String? username;
-  int? score;
+  int? score = 0; // Initialize with 0
   DateTime? lastDonate;
   DateTime? nextDonate;
   String? userBloodGroup;
@@ -29,6 +29,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     fetchUserData();
+    fetchPointsFromDonations(); // Fetch points from donations table
     subscribeToBloodRequests();
   }
 
@@ -44,7 +45,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
       setState(() {
         username = response['name'];
-        score = response['total_points'] ?? 0; // Using total_points instead of score
 
         // Parse last_donate date
         if (response['last_donate'] != null) {
@@ -57,13 +57,62 @@ class _DashboardPageState extends State<DashboardPage> {
         }
 
         userBloodGroup = response['blood_group'];
-        isLoading = false;
       });
     } catch (e) {
-      setState(() => isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error fetching data: $e")),
-      );
+      print("Error fetching user data: $e");
+    }
+  }
+
+  Future<void> fetchPointsFromDonations() async {
+    final supabase = SupabaseConfig.client;
+
+    try {
+      // Fetch all donations for this user and sum the points
+      final response = await supabase
+          .from('donations')
+          .select('points_earned')
+          .eq('donor_id', widget.userId);
+
+      // Calculate total points from donations
+      int totalPoints = 0;
+      if (response != null && response is List) {
+        for (var donation in response) {
+          totalPoints += (donation['points_earned'] as num).toInt();
+        }
+      }
+
+      setState(() {
+        score = totalPoints;
+        isLoading = false;
+      });
+
+      // Also update the users table to keep it synchronized
+      await supabase
+          .from('users')
+          .update({'total_points': totalPoints})
+          .eq('id', widget.userId);
+
+    } catch (e) {
+      print("Error fetching points from donations: $e");
+
+      // Fallback: try to get points from users table if donations query fails
+      try {
+        final userResponse = await supabase
+            .from('users')
+            .select('total_points')
+            .eq('id', widget.userId)
+            .single();
+
+        setState(() {
+          score = userResponse['total_points'] ?? 0;
+          isLoading = false;
+        });
+      } catch (e) {
+        setState(() {
+          score = 0;
+          isLoading = false;
+        });
+      }
     }
   }
 

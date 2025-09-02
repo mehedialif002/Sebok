@@ -16,6 +16,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool isLoading = true;
   Map<String, dynamic>? userData;
   List<Map<String, dynamic>> donationHistory = [];
+  int totalPoints = 0;
 
   @override
   void initState() {
@@ -36,12 +37,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
       setState(() {
         userData = response;
-        isLoading = false;
       });
     } catch (e) {
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error fetching data: $e")),
+        SnackBar(content: Text("Error fetching user data: $e")),
       );
     }
   }
@@ -51,16 +51,28 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try {
       final response = await supabase
-          .from('donations') // Assuming you have a donations table
+          .from('donations')
           .select()
-          .eq('user_id', widget.userId)
+          .eq('donor_id', widget.userId)
           .order('donation_date', ascending: false);
+
+      // Calculate total points from donations
+      int calculatedPoints = 0;
+      for (var donation in response) {
+        calculatedPoints += (donation['points_earned'] as num).toInt();
+      }
 
       setState(() {
         donationHistory = List<Map<String, dynamic>>.from(response);
+        totalPoints = calculatedPoints;
+        isLoading = false;
       });
     } catch (e) {
+      setState(() => isLoading = false);
       print("Error fetching donation history: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error fetching donation history: $e")),
+      );
     }
   }
 
@@ -141,15 +153,29 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     const Divider(),
 
-                    // Score
+                    // Total Points (calculated from donations)
                     _buildProfileItem(
                       icon: Icons.emoji_events,
-                      title: 'Score',
-                      value: '${userData?['total_points'] ?? 0}',
+                      title: 'Total Points',
+                      value: '$totalPoints',
                       valueStyle: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.red[700],
                         fontSize: 18,
+                      ),
+                    ),
+
+                    const Divider(),
+
+                    // Total Donations
+                    _buildProfileItem(
+                      icon: Icons.bloodtype,
+                      title: 'Total Donations',
+                      value: '${donationHistory.length}',
+                      valueStyle: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red[700],
+                        fontSize: 16,
                       ),
                     ),
 
@@ -214,18 +240,40 @@ class _ProfilePageState extends State<ProfilePage> {
                     child: ListTile(
                       leading: const Icon(Icons.bloodtype, color: Colors.red),
                       title: Text(
-                        'Donated ${donation['blood_quantity'] ?? 1} bag(s)',
+                        'Donated at ${donation['hospital_name'] ?? 'Unknown Hospital'}',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      subtitle: Text(
-                        _formatDate(donation['donation_date']),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_formatDate(donation['donation_date'])),
+                          if (donation['request_id'] != null)
+                            Text(
+                              'Request ID: ${donation['request_id']}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                        ],
                       ),
-                      trailing: Text(
-                        '+${donation['points_earned'] ?? 10} points',
-                        style: TextStyle(
-                          color: Colors.green[700],
-                          fontWeight: FontWeight.bold,
-                        ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '+${donation['points_earned'] ?? 10} points',
+                            style: TextStyle(
+                              color: Colors.green[700],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatDate(donation['donation_date']).split(',')[0],
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );

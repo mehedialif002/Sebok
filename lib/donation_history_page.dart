@@ -14,64 +14,77 @@ class DonationHistoryPage extends StatefulWidget {
 
 class _DonationHistoryPageState extends State<DonationHistoryPage> {
   bool isLoading = true;
-  Map<String, dynamic>? userData;
   List<Map<String, dynamic>> donationHistory = [];
   int totalDonations = 0;
+  int totalPoints = 0;
+  DateTime? lastDonationDate;
+  DateTime? nextDonationDate;
 
   @override
   void initState() {
     super.initState();
-    fetchUserData();
     fetchDonationHistory();
-  }
-
-  Future<void> fetchUserData() async {
-    final supabase = SupabaseConfig.client;
-
-    try {
-      final response = await supabase
-          .from('users')
-          .select()
-          .eq('id', widget.userId)
-          .single();
-
-      setState(() {
-        userData = response;
-      });
-    } catch (e) {
-      print("Error fetching user data: $e");
-    }
   }
 
   Future<void> fetchDonationHistory() async {
     final supabase = SupabaseConfig.client;
 
     try {
+      // Fetch all donations for this user from donations table
       final response = await supabase
           .from('donations')
-          .select()
-          .eq('user_id', widget.userId)
+          .select('''
+            donation_date, 
+            points_earned, 
+            hospital_name,
+            request_id,
+            organizations(name)
+          ''')
+          .eq('donor_id', widget.userId)
           .order('donation_date', ascending: false);
 
-      setState(() {
-        donationHistory = List<Map<String, dynamic>>.from(response);
-        totalDonations = donationHistory.length;
-        isLoading = false;
-      });
+      if (response != null && response is List) {
+        // Calculate totals and find latest donation
+        int points = 0;
+        DateTime? latestDate;
+
+        for (var donation in response) {
+          // Sum points
+          points += (donation['points_earned'] as num).toInt();
+
+          // Find latest donation date
+          final donationDate = _parseDate(donation['donation_date']);
+          if (donationDate != null && (latestDate == null || donationDate.isAfter(latestDate))) {
+            latestDate = donationDate;
+          }
+        }
+
+        // Calculate next donation date (90 days after last donation)
+        DateTime? nextDate;
+        if (latestDate != null) {
+          nextDate = latestDate.add(const Duration(days: 90));
+        }
+
+        setState(() {
+          donationHistory = List<Map<String, dynamic>>.from(response);
+          totalDonations = donationHistory.length;
+          totalPoints = points;
+          lastDonationDate = latestDate;
+          nextDonationDate = nextDate;
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
+      }
     } catch (e) {
       print("Error fetching donation history: $e");
       setState(() => isLoading = false);
     }
   }
 
-  String _formatDate(String? dateString) {
-    if (dateString == null) return 'Not available';
-    try {
-      final date = DateTime.parse(dateString);
-      return DateFormat('dd MMMM, yyyy').format(date);
-    } catch (e) {
-      return dateString;
-    }
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Not available';
+    return DateFormat('dd MMMM, yyyy').format(date);
   }
 
   DateTime? _parseDate(String? dateString) {
@@ -84,13 +97,8 @@ class _DonationHistoryPageState extends State<DonationHistoryPage> {
   }
 
   String _getNextDonationDate() {
-    if (userData?['last_donate'] == null) return 'You can donate now';
-
-    final lastDonation = _parseDate(userData?['last_donate']);
-    if (lastDonation == null) return 'You can donate now';
-
-    final nextDonation = lastDonation.add(const Duration(days: 90)); // 3 months gap
-    return DateFormat('dd MMMM, yyyy').format(nextDonation);
+    if (lastDonationDate == null) return 'You can donate now';
+    return _formatDate(nextDonationDate);
   }
 
   @override
@@ -132,8 +140,8 @@ class _DonationHistoryPageState extends State<DonationHistoryPage> {
                     _buildSummaryItem(
                       icon: Icons.calendar_today,
                       title: 'Last Donation',
-                      value: userData?['last_donate'] != null
-                          ? _formatDate(userData?['last_donate'])
+                      value: lastDonationDate != null
+                          ? _formatDate(lastDonationDate)
                           : 'Never donated',
                       color: Colors.blue,
                     ),
@@ -154,7 +162,7 @@ class _DonationHistoryPageState extends State<DonationHistoryPage> {
                     _buildSummaryItem(
                       icon: Icons.emoji_events,
                       title: 'Total Points',
-                      value: '${userData?['total_points'] ?? 0} points',
+                      value: '$totalPoints points',
                       color: Colors.orange,
                     ),
                   ],
@@ -205,6 +213,11 @@ class _DonationHistoryPageState extends State<DonationHistoryPage> {
             else
               Column(
                 children: donationHistory.map((donation) {
+                  final donationDate = _parseDate(donation['donation_date']);
+                  final organization = donation['organizations'] is Map
+                      ? donation['organizations']['name']
+                      : 'Unknown Organization';
+
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
@@ -225,12 +238,22 @@ class _DonationHistoryPageState extends State<DonationHistoryPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _formatDate(donation['donation_date']),
+                            donationDate != null
+                                ? _formatDate(donationDate)
+                                : donation['donation_date'] ?? 'Unknown date',
                             style: const TextStyle(fontSize: 14),
                           ),
                           if (donation['hospital_name'] != null)
                             Text(
-                              'at ${donation['hospital_name']}',
+                              'Hospital: ${donation['hospital_name']}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          if (organization != null)
+                            Text(
+                              'Organization: $organization',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -242,7 +265,7 @@ class _DonationHistoryPageState extends State<DonationHistoryPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            '+${donation['points_earned'] ?? 10}',
+                            '+${donation['points_earned'] ?? 0}',
                             style: TextStyle(
                               color: Colors.green[700],
                               fontWeight: FontWeight.bold,
