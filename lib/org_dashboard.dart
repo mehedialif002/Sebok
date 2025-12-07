@@ -3,6 +3,9 @@ import 'supabase_config.dart';
 import 'main.dart';
 import 'verify.dart';
 import 'PointsAddPage.dart';
+import 'blood_request_list.dart';
+
+import 'sms_test_page.dart';
 class OrgDashboard extends StatelessWidget {
   final String userId;
 
@@ -51,29 +54,36 @@ class OrgDashboard extends StatelessWidget {
                 Navigator.pop(context);
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.verified_user),
-              title: const Text('Donor Verify'),
-              onTap: () {
-                // Navigate to donor verification
-              },
-            ),
+
             ListTile(
               leading: const Icon(Icons.add_circle),
               title: const Text('Points Add'),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const RequestSelectionPage()),
+                  MaterialPageRoute(builder: (context) => PointsAddPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_circle),
+              title: const Text('Donor Verify'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => BloodRequestsPage()),
                 );
               },
             ),
 
             ListTile(
-              leading: const Icon(Icons.manage_accounts),
+              leading: const Icon(Icons.add_circle),
               title: const Text('Request Manage'),
               onTap: () {
-                // Navigate to request management
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SMSPage()),
+                );
               },
             ),
             ListTile(
@@ -117,20 +127,34 @@ class OrgDashboard extends StatelessWidget {
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
               children: [
-                _buildDashboardCard(
-                  icon: Icons.verified_user,
-                  title: 'Donor Verify',
-                  onTap: () {
-                    // Navigate to donor verification
-                  },
-                ),
+
                 _buildDashboardCard(
                   icon: Icons.add_circle,
                   title: 'Points Add',
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const RequestSelectionPage()),
+                      MaterialPageRoute(builder: (context) => PointsAddPage()),
+                    );
+                  },
+                ),
+                _buildDashboardCard(
+                  icon: Icons.add_circle,
+                  title: 'Donor Verify',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => BloodRequestsPage()),
+                    );
+                  },
+                ),
+                _buildDashboardCard(
+                  icon: Icons.add_circle,
+                  title: 'Request Manage',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SMSPage()),
                     );
                   },
                 ),
